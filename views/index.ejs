@@ -20,15 +20,24 @@
                 <h2 class="user text-white text-xl mt-4">user name</h2>
             </div>
             <div class="chat w-[75%] h-full bg-gray-200 relative flex flex-col">
-                <div class="nav w-full h-14 bg-white p-2">
+                <div class="nav w-full h-14 bg-white p-2 flex justify-between">
                     <h1 class="text-2xl text-left capitalize">Chat Room</h1>
+                    <h1>someone is typing...</h1>
+
+                    <div id="user-list" class="bg-white p-4 rounded-md shadow-lg text-center">
+                        <h2 class="text-sm font-bold ">Users Online (<span id="user-count" class="cursor-pointer">0</span>)</h2>
+                        <ul id="usernames" class=" bg-white px-6">
+                            <!-- Usernames will be dynamically inserted here -->
+                        </ul>
+                    </div>
+
                 </div>
-                <div id="messages" class="messages flex-grow overflow-y-auto p-4 space-y-2">
+                <div id="messages" class="messages flex-grow overflow-y-auto p-4 space-y-2 custom-scrollbar">
                     
                 </div>
-                <form id="chat-form" class="chat-form flex p-2">
+                <form id="chat-form" class="chat-form flex p-2 gap-2">
                     <input type="text" id="message-input" class="flex-grow p-2 border border-gray-300 rounded-l" placeholder="Type your message..." autocomplete="off" required>
-                    <button type="submit" class="bg-blue-500 text-white p-2 rounded-r">Send</button>
+                    <button type="submit" class="bg-blue-500 text-white p-2 rounded">Send</button>
                 </form>
             </div>
         </div>
@@ -49,8 +58,56 @@
              }
              else alert("Please enter a valid username!");
 
+
+
+             document.getElementById('user-count').addEventListener('click', function() {
+    const userList = document.getElementById('user-list');
+    const usernames = document.getElementById('usernames');
+    
+    // Toggle the visibility of the usernames list
+    if (usernames.classList.contains('hidden')) {
+        usernames.classList.remove('hidden');
+        console.log(usernames.classList);
+    } else {
+        usernames.classList.add('hidden');
+        console.log(usernames.classList);
+    }
+});
+
             const socket =io();
-            socket.emit("user",username);
+            socket.emit("new user",username);
+
+            
+
+           // Assume 'users' is an array of objects with 'id' and 'username' properties
+socket.on('user-list', function(users) {
+    const userCount = document.getElementById('user-count');
+    const usernamesList = document.getElementById('usernames');
+    // Update user count
+    userCount.textContent = users.length;
+
+    usernamesList.innerHTML = '';
+
+// Populate the list with usernames
+users.forEach(user => {
+    const li = document.createElement('li');
+    li.textContent = user.newuser;
+    li.className = 'text-blue-500 hover:text-blue-700'; // Add styling for clickable effect
+    li.dataset.userId = user.id; // Store the user ID in a data attribute
+    // Append to the list
+
+   
+    usernamesList.appendChild(li);
+});
+
+
+});
+
+
+// Listen for the updated user list 
+    // socket.on('user-list', function(users) {
+    // console.log('Online users:', users);
+    // });
 
 
             const form = document.getElementById('chat-form');
@@ -87,6 +144,7 @@
     // Append the message to the chat container
     messages.appendChild(msgDiv);
     messages.scrollTop = messages.scrollHeight; // Auto-scroll to the latest message
+    
 });
 
     

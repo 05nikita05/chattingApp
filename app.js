@@ -16,18 +16,38 @@ app.get('/',function(req,res){
     res.render('index');
 })
 
-let userids=[];
-let username=[];
+let users=[];
 io.on("connection",function(socket){
-    socket.on("user",function(user){
-        userids.push(socket.id);
-        username.push(user);
-        // io.emit('user',user);
+    socket.on("new user",function(newuser){
+        const user = {id:socket.id,newuser}
+        users.push(user);
+
+        io.emit('user-list',users);
+
+        
+        // io.emit('user joined', { id: socket.id, username: username });
+
     })
+
     socket.on("chat message",function(chatMessage){
     
-    io.emit('chat message',{userId:socket.id,username:username[userids.indexOf(socket.id)],message:chatMessage});
+        const user = users.find(user => user.id === socket.id);
+
+
+        io.emit('chat message', {
+            userId: socket.id,
+            username: user ? user.username : 'Anonymous', // Fallback in case user not found
+            message: chatMessage
+        });
     })
+
+    socket.on("disconnect", function() {
+        // Remove the user from the list when they disconnect
+        users = users.filter(user => user.id !== socket.id);
+
+        // Emit the updated user list to all connected clients
+        io.emit('user-list', users);
+    });
 
     // socket.on("chat message",function(msg){
     //   console.log(msg);
