@@ -20,13 +20,13 @@
                 <h2 class="user text-white text-xl mt-4">user name</h2>
             </div>
             <div class="chat w-[75%] h-full bg-gray-200 relative flex flex-col">
-                <div class="nav w-full h-14 bg-white p-2 flex justify-between">
-                    <h1 class="text-2xl text-left capitalize">Chat Room</h1>
-                    <h1>someone is typing...</h1>
+                <div class="nav w-full h-14 bg-white p-3 flex justify-between items-center">
+                    <h1 class="text-[2vw] text-left capitalize">Chat Room</h1>
+                    <h1 id="typing" class="hidden"><span id="typer">someone</span> is typing...</h1>
 
-                    <div id="user-list" class="bg-white p-4 rounded-md shadow-lg text-center">
-                        <h2 class="text-sm font-bold ">Users Online (<span id="user-count" class="cursor-pointer">0</span>)</h2>
-                        <ul id="usernames" class=" bg-white px-6">
+                    <div id="user-list" class="bg-white p-2 rounded-md shadow-lg flex flex-col gap-4">
+                        <h2 class="text-sm font-bold text-center">Users Online (<span id="user-count" class="cursor-pointer">0</span>)</h2>
+                        <ul id="usernames" class="mt-2 hidden absolute top-10 right-0 px-4 text-center bg-white border border-gray-300 rounded-md shadow-lg">
                             <!-- Usernames will be dynamically inserted here -->
                         </ul>
                     </div>
@@ -60,61 +60,76 @@
 
 
 
-             document.getElementById('user-count').addEventListener('click', function() {
-    const userList = document.getElementById('user-list');
-    const usernames = document.getElementById('usernames');
-    
-    // Toggle the visibility of the usernames list
-    if (usernames.classList.contains('hidden')) {
-        usernames.classList.remove('hidden');
-        console.log(usernames.classList);
-    } else {
-        usernames.classList.add('hidden');
-        console.log(usernames.classList);
-    }
-});
+             
 
             const socket =io();
             socket.emit("new user",username);
 
-            
-
+            const userCount = document.getElementById('user-count');
+            const usernames = document.getElementById('usernames');
+            userCount.addEventListener('click', function() {
+    
+    // Toggle the visibility of the usernames list
+    if (usernames.classList.contains('hidden')) {
+        usernames.classList.remove('hidden');
+    } else {
+        usernames.classList.add('hidden');
+    }
+});
            // Assume 'users' is an array of objects with 'id' and 'username' properties
 socket.on('user-list', function(users) {
-    const userCount = document.getElementById('user-count');
-    const usernamesList = document.getElementById('usernames');
+
     // Update user count
     userCount.textContent = users.length;
 
-    usernamesList.innerHTML = '';
+    usernames.innerHTML = '';
 
-// Populate the list with usernames
+    // Populate the list with usernames
 users.forEach(user => {
     const li = document.createElement('li');
     li.textContent = user.newuser;
-    li.className = 'text-blue-500 hover:text-blue-700'; // Add styling for clickable effect
+    li.className = 'text-blue-500 hover:text-blue-700 h-auto'; // Add styling for clickable effect
     li.dataset.userId = user.id; // Store the user ID in a data attribute
     // Append to the list
 
    
-    usernamesList.appendChild(li);
+    usernames.appendChild(li);
 });
 
-
-});
-
-
-// Listen for the updated user list 
-    // socket.on('user-list', function(users) {
-    // console.log('Online users:', users);
-    // });
+   
 
 
-            const form = document.getElementById('chat-form');
-            const input = document.getElementById('message-input');
+
             const messages = document.getElementById('messages');
+            const input = document.getElementById('message-input');
+
+            let typingTimeout;
+
+            input.addEventListener('input', () => {
+            socket.emit('typing', username); // Replace 'User' with the actual username
+    // Clear the previous timeout and start a new one
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+            socket.emit('stop typing');
+            }, 1000); // Stop typing after 3 seconds of inactivity
+});
+// Listen for typing events from the server
+         socket.on('typing', (username) => {
+         typer.textContent = `${username} `;
+         typing.classList.remove('hidden');
+});  
+
+// Listen for stop typing events from the server
+socket.on('stop typing', () => {
+    // typer.textContent = ''; // Clear the typing indicator
+    typing.classList.add('hidden');
+});
 
 
+});
+
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('message-input');
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -146,9 +161,6 @@ users.forEach(user => {
     messages.scrollTop = messages.scrollHeight; // Auto-scroll to the latest message
     
 });
-
-    
-
         })
 
     </script>

@@ -29,14 +29,26 @@ io.on("connection",function(socket){
 
     })
 
+    socket.on('typing', (username) => {
+        console.log(username)
+        socket.broadcast.emit('typing', username);
+    });
+
+    socket.on('stop typing', () => {
+        socket.broadcast.emit('stop typing');
+    });
+
     socket.on("chat message",function(chatMessage){
+
+        
+    
     
         const user = users.find(user => user.id === socket.id);
 
 
         io.emit('chat message', {
             userId: socket.id,
-            username: user ? user.username : 'Anonymous', // Fallback in case user not found
+            username: user ? user.newuser : 'Anonymous', // Fallback in case user not found
             message: chatMessage
         });
     })
