@@ -23,14 +23,9 @@ io.on("connection",function(socket){
         users.push(user);
 
         io.emit('user-list',users);
-
-        
-        // io.emit('user joined', { id: socket.id, username: username });
-
     })
 
     socket.on('typing', (username) => {
-        console.log(username)
         socket.broadcast.emit('typing', username);
     });
 
@@ -39,34 +34,18 @@ io.on("connection",function(socket){
     });
 
     socket.on("chat message",function(chatMessage){
-
-        
-    
-    
         const user = users.find(user => user.id === socket.id);
-
-
         io.emit('chat message', {
             userId: socket.id,
-            username: user ? user.newuser : 'Anonymous', // Fallback in case user not found
+            username: user ? user.newuser : 'Anonymous', 
             message: chatMessage
         });
     })
 
     socket.on("disconnect", function() {
-        // Remove the user from the list when they disconnect
         users = users.filter(user => user.id !== socket.id);
-
-        // Emit the updated user list to all connected clients
         io.emit('user-list', users);
     });
-
-    // socket.on("chat message",function(msg){
-    //   console.log(msg);
-    //   io.emit('chat message',msg);
-        
-    // })
 })
-
 
 server.listen(3000);

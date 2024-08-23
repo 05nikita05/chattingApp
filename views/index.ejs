@@ -9,9 +9,12 @@
 </head>
 <body class=" bg-cyan-600 flex items-center justify-center relative">
     <div class="chatpannel bg-white rounded-md w-fit p-4 ">
+        <form id="startChat">
             <label for="username" class="text-2xl">name:</label>
             <input type="text" id="username" autocomplete="off" class="border-2 " name="username" required>
             <button class=" startbtn bg-blue-600 px-3 py-1 rounded-md text-white" type="submit">Start</button>
+        </form>
+
     </div>
     <div class="chatRoom h-[80%] w-[70%] rounded-md bg-white overflow-hidden relative shadow-cyan-800 shadow-xl hidden">
         <div class="chatRoom-inner flex relative h-full w-full">
@@ -48,26 +51,29 @@
     <script>
 
         
-            let username ="";
-            document.querySelector(".startbtn").addEventListener("click",function(){
-            username = document.querySelector("#username").value;
-             if(username.trim().length>0){
+            const username = document.querySelector("#username");
+            const startBtn = document.querySelector("#startChat");
+            const userCount = document.getElementById('user-count');
+            const usernames = document.getElementById('usernames');
+            const messages = document.getElementById('messages');
+            const input = document.getElementById('message-input');
+            const form = document.getElementById('chat-form');
+            const typing = document.getElementById('typing');
+            const typer = document.getElementById('typer');
+            
+
+            let typingTimeout;
+            
+            startBtn.addEventListener("submit",function(e){
+                e.preventDefault();
+             if(username.value.trim().length>0){
                 document.querySelector(".chatpannel").classList.add("hidden");
                 document.querySelector(".chatRoom").classList.remove("hidden");
-                document.querySelector(".chatRoom h2").textContent = username;
+                document.querySelector(".chatRoom h2").textContent = username.value;
              }
              else alert("Please enter a valid username!");
 
-
-
-             
-
-            const socket =io();
-            socket.emit("new user",username);
-
-            const userCount = document.getElementById('user-count');
-            const usernames = document.getElementById('usernames');
-            userCount.addEventListener('click', function() {
+             userCount.addEventListener('click', function() {
     
     // Toggle the visibility of the usernames list
     if (usernames.classList.contains('hidden')) {
@@ -76,61 +82,38 @@
         usernames.classList.add('hidden');
     }
 });
-           // Assume 'users' is an array of objects with 'id' and 'username' properties
+
+        const socket =io();
+        socket.emit("new user",username);
+     
 socket.on('user-list', function(users) {
-
-    // Update user count
     userCount.textContent = users.length;
-
     usernames.innerHTML = '';
+    
 
-    // Populate the list with usernames
 users.forEach(user => {
     const li = document.createElement('li');
     li.textContent = user.newuser;
-    li.className = 'text-blue-500 hover:text-blue-700 h-auto'; // Add styling for clickable effect
-    li.dataset.userId = user.id; // Store the user ID in a data attribute
-    // Append to the list
-
-   
+    li.className = 'text-blue-500 hover:text-blue-700 h-auto';
+    li.dataset.userId = user.id; 
     usernames.appendChild(li);
 });
-
-   
-
-
-
-            const messages = document.getElementById('messages');
-            const input = document.getElementById('message-input');
-
-            let typingTimeout;
-
-            input.addEventListener('input', () => {
-            socket.emit('typing', username); // Replace 'User' with the actual username
-    // Clear the previous timeout and start a new one
-            clearTimeout(typingTimeout);
-            typingTimeout = setTimeout(() => {
-            socket.emit('stop typing');
-            }, 1000); // Stop typing after 3 seconds of inactivity
+    input.addEventListener('input', () => {
+    socket.emit('typing', username); 
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+    socket.emit('stop typing');
+    }, 1000);
 });
-// Listen for typing events from the server
-         socket.on('typing', (username) => {
-         typer.textContent = `${username} `;
-         typing.classList.remove('hidden');
+     socket.on('typing', (username) => {
+     typer.textContent = `${username} `;
+     typing.classList.remove('hidden');
 });  
 
-// Listen for stop typing events from the server
 socket.on('stop typing', () => {
-    // typer.textContent = ''; // Clear the typing indicator
     typing.classList.add('hidden');
 });
-
-
 });
-
-    const form = document.getElementById('chat-form');
-    const input = document.getElementById('message-input');
-
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         if (input.value) {
@@ -140,29 +123,19 @@ socket.on('stop typing', () => {
     });
 
     socket.on('chat message', function(data) {
-    const messages = document.getElementById('messages');
-    const msgDiv = document.createElement('div'); // Create a new div for the message
+    const msgDiv = document.createElement('div'); 
 
-    // Check if the message is from the current user or another user
     if (socket.id === data.userId) {
-        // Message from the current user (sender)
         msgDiv.className = 'msg ml-auto w-fit bg-blue-500 text-white px-2 py-1 rounded-md';
         msgDiv.innerHTML = `<span class="user font-bold">You: </span>${data.message}`;
-
     } else {
-        // Message from another user (receiver)
         msgDiv.className = 'msg self-start w-fit bg-gray-300 text-black px-2 py-1 rounded-md';
         msgDiv.innerHTML = `<span class="user font-bold">${data.username}: </span>${data.message}`;
-
     }
-
-    // Append the message to the chat container
     messages.appendChild(msgDiv);
-    messages.scrollTop = messages.scrollHeight; // Auto-scroll to the latest message
-    
+    messages.scrollTop = messages.scrollHeight; // Auto-scroll to the latest message   
 });
-        })
-
+})
     </script>
 </body>
 </html>
