@@ -3,6 +3,7 @@ const app = express();
 const path = require("path");
 
 
+
 const http = require('http');
 const server = http.createServer(app);
 const socketIo = require('socket.io');
@@ -19,52 +20,66 @@ app.get('/',function(req,res){
 
 let users=[];
 let waiting=[];
-let room;
-io.on("connection",function(socket){
-    socket.on("new user",function(newuser){
-        const user = {id:socket.id,newuser}
-        users.push(user);
-
-        io.emit('user-list',users);
-    })
-
-    socket.on('joinRoom',function(newuser){
-        socket.data.user = {id:socket.id,newuser}
-        waiting.push(socket.data.user);
-        if(waiting.length>1){
-            room = uuidv4();
-            waiting.forEach((userSocket) => {
-                userSocket.join(room);
-            });
-        }
-        waiting = [];
-        io.to(room).emit('startChat', room);
-
-    })
-
-    socket.on('typing', (username) => {
-        socket.broadcast.emit('typing', username);
+let room={};
+io.on("connection", function (socket) {
+    socket.on("public-room", function (newuser) {
+      const user = { id: socket.id, name: newuser };
+      users.push(user);
+  
+      // Add user to the "public-room"
+      socket.join("public-room");
+    //   console.log(users,'public')
+      // Emit the updated user list to all users in the public room
+      io.to("public-room").emit("user-list", { users: users, room: "public-room" });
+    });
+  
+    socket.on("joinRoom", function (newuser) {
+      socket.data.user = { id: socket.id, name: newuser };
+  
+      if (waiting.length > 0) {
+        let partner = waiting.shift();
+        const roomname = uuidv4();
+        socket.join(roomname);
+        partner.join(roomname);
+        io.to(roomname).emit("room joined", roomname);
+      } else {
+        waiting.push(socket);
+      }
+    });
+  
+    socket.on("typing", (data) => {
+        // console.log(`User ${data.user} is typing in room ${data.room}`);
+        socket.to(data.room).emit("typing", { username: data.user });
     });
 
-    socket.on('stop typing', () => {
-        socket.broadcast.emit('stop typing');
+    socket.on("stop typing", (data) => {
+        // console.log(`User ${data.user} stopped typing in room ${data.room}`);
+        socket.to(data.room).emit("stop typing");
     });
 
-    socket.on("chat message",function(chatMessage){
-        const user = users.find(user => user.id === socket.id)|| socket.data.user;
-        io.emit('chat message', {
+    socket.on("chat message", (data) => {
+        // console.log(`Message from ${data.username} in room ${data.room}: ${data.msg}`);
+        socket.to(data.room).emit("message", {
+            room: data.room,
+            msg: data.msg,
             userId: socket.id,
-            username: user ? user.newuser : 'Anonymous', 
-            message: chatMessage
-        }); 
-    })
-
-    socket.on("disconnect", function() {
-        users = users.filter(user => user.id !== socket.id);
-        io.emit('user-list', users);
-        waiting = waiting.filter(userSocket => userSocket.id !== socket.id);
-
+            username: data.username || "Anonymous",
+        });
     });
-})
-
+  
+    socket.on("disconnect", function() {
+        let userIndex = users.findIndex(user => user.id === socket.id);
+        if (userIndex !== -1) {
+            users.splice(userIndex, 1);
+            io.to("public-room").emit('user-list', { users: users, room: "public-room" });
+        }
+    
+        let waitingIndex = waiting.findIndex(waitingUser => waitingUser.id === socket.id);
+        if (waitingIndex !== -1) {
+            waiting.splice(waitingIndex, 1);
+        }
+    });
+    
+  });
+  
 server.listen(3000);
